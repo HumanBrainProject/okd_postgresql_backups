@@ -1,0 +1,36 @@
+pipeline {
+    agent {
+        label 'docker_build'
+    }
+
+    environment {
+        FULL_DOCKER_IMAGE_NAME = 'thevirtualbrain/okd_postgresql_backups'
+    }
+
+    stages {
+
+
+        stage ('Build okd_postgresql_backups docker image') {
+            steps {
+                script {
+                    VERSION_TAG = "1.2"
+                    withDockerRegistry(credentialsId: 'tvb_on_docker_hub') {
+                        def dockerImage = docker.build("${FULL_DOCKER_IMAGE_NAME}:'${VERSION_TAG}'")
+                        dockerImage.push()
+                        dockerImage.push('latest')
+                    }
+                }
+            }
+        }
+    }
+    post {
+        changed {
+            mail to: 'rares.horge@codemart.ro',
+            subject: "Jenkins Pipeline ${currentBuild.fullDisplayName} changed status",
+            body: """
+                Result: ${currentBuild.result}
+                Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'
+                Check console output at ${env.BUILD_URL}"""
+        }
+    }
+}
